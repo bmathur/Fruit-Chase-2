@@ -1,0 +1,385 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>hello phaser!</title>
+        <script src="https://cdn.jsdelivr.net/phaser/2.5.0/phaser.min.js"></script>
+    </head>
+    <body>
+
+    <script type="text/javascript">
+
+    window.onload = function() {
+
+var game = new Phaser.Game(800, 480, Phaser.CANVAS, 'phaser-example', { preload: preload, create: create, update: update });
+
+
+
+
+function preload() {
+//load images
+    game.load.tilemap('bgmap', 'assets/tilemaps/maps/superMarioBG.json', null, Phaser.Tilemap.TILED_JSON);
+    game.load.image('bgtiles', 'assets/tilemaps/tiles/super_mario.png');
+    game.load.image('collision', 'assets/tilemaps/tiles/marioFloor.png');
+    game.load.image('platform', 'assets/tilemaps/tiles/platform.png');
+    game.load.image('evilFruit', 'assets/sprites/EvilFruit.png');
+    game.load.image('sPipe', 'assets/tilemaps/tiles/smallMarioPipe.png');
+    game.load.image('mPipe', 'assets/tilemaps/tiles/medMarioPipe.png');
+    game.load.image('lPipe', 'assets/tilemaps/tiles/largeMarioPipe.png');
+    game.load.image('sPlat', 'assets/tilemaps/tiles/smallMarioPlatform.png');
+    game.load.image('lPlat', 'assets/tilemaps/tiles/largeMarioPlatform.png');
+    game.load.image('lQPlat', 'assets/tilemaps/tiles/largeMarioPlatformQ.png');
+    game.load.image('QBlock', 'assets/tilemaps/tiles/marioQBlock.png');
+    game.load.image('playerL', 'assets/sprites/georgeLeft.png');
+    game.load.image('playerR', 'assets/sprites/georgeRight.png');
+    game.load.image('playerD', 'assets/sprites/georgeDown.png');
+    game.load.image('fruit', 'assets/sprites/berry.png');
+    game.load.image('tomato', 'assets/sprites/tomato.png');
+    game.load.image('boss', 'assets/sprites/bowser.png');
+    game.load.image('fire', 'assets/sprites/fire.png');
+    game.load.image('pause', 'assets/sprites/pause.png');
+    game.load.image('music', 'assets/sprites/MUSIC.png');
+    //load audio
+    game.load.audio('marioTheme', 'assets/audio/marioTheme.mp3');
+}
+
+var map;
+var bg;
+var player;
+var cursors;
+var ground;
+var enemies;
+var fruits;
+var dir = 1;
+var powerUp;
+var hasPowerUp = 0;
+const GRAV = 500; 
+var text;
+var fire;
+var boss;
+var enemyBullet;
+var bulletSpeed;
+var bullet;
+var bossHP = 5;
+var shootTimer;
+var music;
+var fireButton;
+var instr;
+var pauseb;
+var count = 0;
+function create() {
+    //physics init
+    game.physics.startSystem(Phaser.Physics.ARCADE);
+    game.physics.arcade.gravity.y = GRAV;
+    
+    //create map
+    game.stage.backgroundColor = '#787878';
+
+    map = game.add.tilemap('bgmap');
+        
+    map.addTilesetImage('SuperMarioBros', 'bgtiles');
+    //add background
+    bg = map.createLayer('World1');
+    bg.scale.set(2);
+    bg.resizeWorld();
+
+    ground = game.add.group();
+    ground.enabaleBody = true;
+        
+    //Create platforms and gound
+    var col = ground.create(0,414,'collision');
+    game.physics.arcade.enable(col);
+    col.scale.set(2);
+    col.body.immovable = true;
+    col.body.gravity.y = -1*GRAV;
+    
+    //start/end barriers
+    var plat = ground.create(170,285,'lPipe');
+    game.physics.arcade.enable(plat);
+    plat.scale.set(2);
+    plat.body.immovable = true;
+    plat.body.gravity.y = -1*GRAV;
+    
+    plat = ground.create(6000,285,'lPipe');
+    game.physics.arcade.enable(plat);
+    plat.scale.set(2);
+    plat.body.immovable = true;
+    plat.body.gravity.y = -1*GRAV;
+    
+    //create lPlatforms
+    for (var i = 0; i < 5; i++) {
+        plat = ground.create(Math.random() * 900 + 200 + i*1200 + 200,Math.random() * 100 + 85,'lPlat');
+        game.physics.arcade.enable(plat);
+        plat.scale.set(2);
+        plat.body.immovable = true;
+        plat.body.gravity.y = -1*GRAV;
+    }
+    
+        //create sPlatforms
+    for (var i = 0; i < 5; i++) {
+        plat = ground.create(Math.random() * 900 + 200 + i*1100 + 200,Math.random() * 100 + 215,'sPlat');
+        game.physics.arcade.enable(plat);
+        plat.scale.set(2);
+        plat.body.immovable = true;
+        plat.body.gravity.y = -1*GRAV;
+    }
+    
+            //create sPipes
+    for (var i = 0; i < 2; i++) {
+        plat = ground.create(Math.random() * 400 + 200 + i*3200 + 200,350,'sPipe');
+        game.physics.arcade.enable(plat);
+        plat.scale.set(2);
+        plat.body.immovable = true;
+        plat.body.gravity.y = -1*GRAV;
+    }
+
+            //create mPipes
+    for (var i = 0; i < 2; i++) {
+        plat = ground.create(Math.random() * 400 + 1000 + i*3200 + 200,320,'mPipe');
+        game.physics.arcade.enable(plat);
+        plat.scale.set(2);
+        plat.body.immovable = true;
+        plat.body.gravity.y = -1*GRAV;
+    }
+    
+    //Create enemies
+    enemies = game.add.group();
+    for (var i = 0; i < 8; i++) {
+        var evilFruit = enemies.create(Math.random() * 3000 + 200 + i*400,0,'evilFruit');
+        evilFruit.scale.set(1);
+        game.physics.arcade.enable(evilFruit);
+        evilFruit.body.collideWorldBounds = true;
+        evilFruit.body.bounce.y=.3;
+    }
+    
+    //Create Boss
+    boss = game.add.sprite(6400,0,'boss');
+    boss.scale.set(2);
+    game.physics.arcade.enable(boss);
+    boss.body.collideWorldBounds = true;
+    boss.body.bounce.y = .2;
+    
+    //Create fruits
+    fruits = game.add.group();
+        for (var i = 0; i < 8; i++) {
+        var goodFruit = fruits.create(Math.random() * 3000 + i*400 + 200,0,'fruit');
+        game.physics.arcade.enable(goodFruit);
+        goodFruit.body.collideWorldBounds = true;
+        goodFruit.body.bounce.y=.3;
+    }
+    var goodFruit = fruits.create(180,0,'fruit');
+        game.physics.arcade.enable(goodFruit);
+        goodFruit.body.collideWorldBounds = true;
+        goodFruit.body.bounce.y=.3;
+        
+    goodFruit = fruits.create(6080,0,'fruit');
+        game.physics.arcade.enable(goodFruit);
+        goodFruit.body.collideWorldBounds = true;
+        goodFruit.body.bounce.y=.3;
+    //Create player
+    
+    player = game.add.sprite(0,game.world.height - 150,'playerR');
+    player.scale.set(1.5) ;
+    player.anchor.setTo(.5,.5);
+    game.physics.arcade.enable(player);
+
+    player.body.collideWorldBounds = true;
+
+    //Create player weapon
+    powerUp = game.add.group();
+    powerUp.enableBody = true;
+    powerUp.physicsBodyType = Phaser.Physics.ARCADE;
+    powerUp.createMultiple(1, 'tomato');
+    powerUp.setAll('anchor.x', 0.5);
+    powerUp.setAll('anchor.y', 1);
+    powerUp.setAll('outOfBoundsKill', true);
+    powerUp.setAll('checkWorldBounds', true);
+
+    //Create boss weapon
+    fire = game.add.group();
+    fire.enableBody = true;
+    fire.physicsBodyType = Phaser.Physics.ARCADE;
+    fire.createMultiple(30, 'fire');
+    fire.setAll('anchor.x', 0.5);
+    fire.setAll('anchor.y', 1);
+    fire.setAll('outOfBoundsKill', true);
+    fire.setAll('checkWorldBounds', true);
+    
+    //keypress listeners
+    cursors = game.input.keyboard.createCursorKeys();
+    fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+    
+    //enemy movement timer
+    game.time.events.loop(Phaser.Timer.SECOND * 1.5, changeDir, this);
+    game.time.events.loop(Phaser.Timer.SECOND * 2.5, bossMove,this);
+    shootTimer = game.time.events.loop(Phaser.Timer.SECOND * 2.5, bossShoot,this);
+    //music
+    music = game.add.audio('marioTheme');
+    music.loopFull();
+    
+    text = game.add.text(6100, 100, "Boss HP: 5", { font: "65px Arial", fill: "#ff0044", align: "center" });
+    text.anchor.x = .5;
+    text.anchor.y = .5;
+    
+    instr = game.add.text(0,10,"Arrow Keys to Move, Space to Shoot (With Power Up Berry)",{ font: "20px Arial", fill: "#000000", align: "center" });
+    
+            //create buttons
+    pauseb = game.add.button(0,40,'pause',pause,this,2,1,0);
+    pauseb.inputEnabled = true;
+    pauseb.fixedToCamera = true;
+    pauseb.scale.setTo(.075);
+    musicb = game.add.button(40,40,'music',musicf,this,2,1,0);
+    musicb.inputEnabled = true;
+    musicb.fixedToCamera = true;
+    musicb.scale.setTo(.075);
+    Textp = game.add.text(0,90,'Score:'+count,{ font: "20px Arial", fill: "#000000", align: "center" });
+    Textp.fixedToCamera = true;
+    
+}
+    function pause(){
+        if(game.pause!=true){
+            game.paused = true;
+            pmenu  = game.add.sprite(0,40,'pause');
+            pmenu.scale.setTo(.075);
+            game.input.onDown.add(unpause,self);
+            //window.location.href ="indexp1.html";
+        }
+    }
+    function unpause(){
+        game.paused = false;
+        pmenu.destroy();
+    }
+    
+    function musicf(){
+        if(music.mute !=true){
+            music.mute =true;
+        }
+        else music.mute = false;
+    }
+    function bossShoot() {
+        enemyBullet = fire.getFirstExists(false);
+        if (enemyBullet) {
+            enemyBullet.reset(boss.x,boss.y);
+            enemyBullet.body.velocity.x = -250;
+        }
+    }
+    
+    function bossMove() {
+     boss.body.velocity.y = -350;   
+     boss.body.velocity.x = dir * 100;
+    }
+    
+    function touchEnemy(player,evilFruit) {
+        player.x = 0;
+        player.y = game.world.height - 150;
+        hasPowerUp = 0;
+    }
+
+    function touchFruit(player,fruit) {
+        fruit.kill();
+        count= count+1;
+        Textp.text = 'Score:'+count;
+        hasPowerUp = 1;
+    }    
+    
+    function hitEnemy(powerUp, enemy) {
+        enemy.kill();
+        count = count +1;
+        Textp.text = 'Score:'+count;
+        powerUp.kill();
+    }
+    
+    function changeDir() {
+        dir *= -1;
+        
+        enemies.forEach(function(enemy) {
+       enemy.body.velocity.x = dir * (Math.random() * 100 + 100);
+        });
+    }
+    
+    function hitBoss(boss,powerUp) {
+        powerUp.kill();
+        bossHP -= 1;
+        text.text = 'Boss HP: ' + bossHP;
+        count = count +1;
+        Textp.text = 'Score:'+count;
+        if (bossHP == 0) {
+            boss.kill();
+            text.text = 'You Win!!!!!!11!1';
+            text.fontSize += 10;
+            game.time.events.remove(shootTimer);
+            game.time.events.loop(Phaser.Timer.SECOND, win,this);
+        }
+    }
+    
+    function win() {
+        if (dir == 1) {
+            text.addColor('#000FF',0);
+        }
+        else {
+            text.addColor('#00FF00',0);
+        }
+        
+    }
+    
+function update() {
+    //collision handlers
+    var onGround = game.physics.arcade.collide(player, ground);
+    game.physics.arcade.collide(enemies, ground);
+    game.physics.arcade.collide(fruits, ground);
+    game.physics.arcade.collide(fruits, enemies);
+    game.physics.arcade.collide(enemies);
+    game.physics.arcade.collide(fruits);
+    game.physics.arcade.collide(player,enemies,touchEnemy);
+    game.physics.arcade.collide(player,fruits,touchFruit);
+    game.physics.arcade.overlap(powerUp,enemies,hitEnemy,null, this);
+    game.physics.arcade.collide(boss,ground);
+    game.physics.arcade.collide(player,boss,touchEnemy,null,this);
+    game.physics.arcade.collide(player,fire,touchEnemy,null,this);
+    game.physics.arcade.collide(powerUp,boss,hitBoss,null,this);
+    //player movement
+    player.body.velocity.x=0;
+    game.camera.follow(player);
+    if (cursors.left.isDown)
+    {
+        player.body.velocity.x -= 200;
+        player.loadTexture('playerL');
+        bulletSpeed = -450;
+    }
+    else if (cursors.right.isDown)
+    {
+        player.body.velocity.x += 200;
+        player.loadTexture('playerR');
+        bulletSpeed = 450;
+    }
+    else {
+        player.loadTexture('playerD');
+    }
+    if (cursors.up.isDown  && onGround)
+    {
+        player.body.velocity.y = -350;
+    }
+    if (hasPowerUp == 1   && fireButton.isDown) {
+        bullet = powerUp.getFirstExists(false);
+        if (bullet) {
+            bullet.reset(player.x,player.y);
+            bullet.body.velocity.x = bulletSpeed;
+        }
+    }
+    if (bossHP < 1) {
+        text.rotation += .03;
+    }
+   
+
+
+    }
+    
+    function render() {
+    
+    }
+};
+
+    </script>
+
+    </body>
+</html>
